@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>קנייה חכמה</title>
+<meta name="theme-color" content="#15803d" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="icon" href="/icon-192.png" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: #f6f5f0; }
+  input, button { font-family: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2.5px solid #15803d; outline-offset: 2px; }
+  ::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ═══════════ אייקונים (SVG מובנים) ═══════════ */
+const I = ({ children, size = 20, strokeWidth = 2, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth={strokeWidth}
+    strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {children}
+  </svg>
+);
+const PlusI = (p) => <I {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></I>;
+const CheckI = (p) => <I {...p}><polyline points="20 6 9 17 4 12"/></I>;
+const XI = (p) => <I {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></I>;
+const TrashI = (p) => <I {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></I>;
+const CartI = (p) => <I {...p}><circle cx="9" cy="20" r="1.7"/><circle cx="18" cy="20" r="1.7"/><path d="M2 2h3l2.5 12.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.6L21 7H6"/></I>;
+const HomeI = (p) => <I {...p}><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></I>;
+const BookmarkI = (p) => <I {...p}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></I>;
+const ChevronLeftI = (p) => <I {...p}><polyline points="15 18 9 12 15 6"/></I>;
+const SquareI = (p) => <I {...p}><rect x="4" y="4" width="16" height="16" rx="3"/></I>;
+const CheckSquareI = (p) => <I {...p}><rect x="4" y="4" width="16" height="16" rx="3"/><polyline points="8.5 12.5 11 15 16 9.5"/></I>;
+const UpDownI = (p) => <I {...p}><polyline points="3 8 7 4 11 8"/><line x1="7" y1="4" x2="7" y2="20"/><polyline points="13 16 17 20 21 16"/><line x1="17" y1="20" x2="17" y2="4"/></I>;
+const LeftRightI = (p) => <I {...p}><polyline points="8 3 4 7 8 11"/><line x1="4" y1="7" x2="20" y2="7"/><polyline points="16 13 20 17 16 21"/><line x1="20" y1="17" x2="4" y2="17"/></I>;
+const CopyI = (p) => <I {...p}><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></I>;
+const PencilI = (p) => <I {...p}><path d="M17 3l4 4L8 20l-5 1 1-5z"/></I>;
+const StoreI = (p) => <I {...p}><path d="M4 9L5.5 4h13L20 9"/><path d="M5 9v11h14V9"/><path d="M9.5 20v-5.5h5V20"/><path d="M4 9h16"/></I>;
+const ListPlusI = (p) => <I {...p}><line x1="3" y1="6" x2="13" y2="6"/><line x1="3" y1="12" x2="13" y2="12"/><line x1="3" y1="18" x2="10" y2="18"/><line x1="18" y1="9" x2="18" y2="15"/><line x1="15" y1="12" x2="21" y2="12"/></I>;
+const UsersI = (p) => <I {...p}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9" r="2.6"/><path d="M16.5 14.6c2.6.3 4.4 1.9 5 4.4"/></I>;
+const LogOutI = (p) => <I {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></I>;
+
+/* ═══════════ שכבת ה-API ═══════════ */
+const api = (() => {
+  async function req(path, opts = {}) {
+    const r = await fetch("/api" + path, {
+      headers: { "Content-Type": "application/json" },
+      ...opts,
+    });
+    if (!r.ok) {
+      const e = new Error("api");
+      e.status = r.status;
+      throw e;
+    }
+    return r.json();
+  }
+  return {
+    create: (name) => req("/household", { method: "POST", body: JSON.stringify({ name }) }),
+    get: (code) => req("/household/" + encodeURIComponent(code)),
+    addItem: (code, list, item) => req(`/household/${code}/${list}/items`, { method: "POST", body: JSON.stringify(item) }),
+    updItem: (code, list, id, f) => req(`/household/${code}/${list}/items/${id}`, { method: "PATCH", body: JSON.stringify(f) }),
+    delItem: (code, list, id) => req(`/household/${code}/${list}/items/${id}`, { method: "DELETE" }),
+    clearDone: (code) => req(`/household/${code}/active/clear-done`, { method: "POST" }),
+    addTemplate: (code, name) => req(`/household/${code}/templates`, { method: "POST", body: JSON.stringify({ name }) }),
+    delTemplate: (code, tid) => req(`/household/${code}/templates/${tid}`, { method: "DELETE" }),
+    addTplItem: (code, tid, item) => req(`/household/${code}/templates/${tid}/items`, { method: "POST", body: JSON.stringify(item) }),
+    updTplItem: (code, tid, id, f) => req(`/household/${code}/templates/${tid}/items/${id}`, { method: "PATCH", body: JSON.stringify(f) }),
+    delTplItem: (code, tid, id) => req(`/household/${code}/templates/${tid}/items/${id}`, { method: "DELETE" }),
+    transfer: (code, p) => req(`/household/${code}/transfer`, { method: "POST", body: JSON.stringify(p) }),
+  };
+})();
+
+/* ═══════════ מחלקות הסופר ═══════════ */
+const AISLES = [
+  { id: "produce", name: "פירות וירקות", emoji: "🥬" },
+  { id: "bakery", name: "מאפייה ולחם", emoji: "🥖" },
+  { id: "dairy", name: "מוצרי חלב וביצים", emoji: "🥛" },
+  { id: "meat", name: "בשר ודגים", emoji: "🍗" },
+  { id: "frozen", name: "קפואים", emoji: "🧊" },
+  { id: "dry", name: "יבשים ושימורים", emoji: "🥫" },
+  { id: "snacks", name: "חטיפים ומתוקים", emoji: "🍫" },
+  { id: "drinks", name: "משקאות", emoji: "🧃" },
+  { id: "household", name: "ניקיון וטואלטיקה", emoji: "🧼" },
+  { id: "other", name: "שונות", emoji: "🛒" },
+];
+const aisleById = (id) => AISLES.find((a) => a.id === id) || AISLES[AISLES.length - 1];
+const aisleIndex = (id) => AISLES.findIndex((a) => a.id === id);
+
+const STORAGE_KEY = "kniya_code";
+
+/* ═══════════ שורש: בחירת מסך ═══════════ */
+function Root() {
+  const [code, setCode] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
+  });
+  const [hh, setHh] = useState(null);
+  const [loadErr, setLoadErr] = useState(false);
+
+  useEffect(() => {
+    if (!code) return;
+    let alive = true;
+    api.get(code)
+      .then((d) => alive && setHh(d))
+      .catch((e) => {
+        if (!alive) return;
+        if (e.status === 404) {
+          try { localStorage.removeItem(STORAGE_KEY); } catch {}
+          setCode("");
+        } else setLoadErr(true);
+      });
+    return () => { alive = false; };
+  }, [code]);
+
+  function connected(d) {
+    try { localStorage.setItem(STORAGE_KEY, d.code); } catch {}
+    setHh(d);
+    setCode(d.code);
+  }
+
+  function leave() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setHh(null);
+    setCode("");
+    setLoadErr(false);
+  }
+
+  if (!code) return <Welcome onConnected={connected} />;
+  if (loadErr)
+    return (
+      <Centered>
+        <p style={S.emptyTitle}>אין חיבור לשרת</p>
+        <p style={S.emptyText}>בדקו את החיבור לאינטרנט ונסו לרענן</p>
+        <button style={{ ...S.saveBtn, maxWidth: 220, marginTop: 16 }} onClick={() => location.reload()}>
+          רענון
+        </button>
+      </Centered>
+    );
+  if (!hh)
+    return (
+      <Centered>
+        <div style={S.brandIcon}><CartI size={20} strokeWidth={2.5} /></div>
+        <p style={{ ...S.emptyText, marginTop: 14 }}>טוען את הרשימות…</p>
+      </Centered>
+    );
+  return <App hh={hh} setHh={setHh} onLeave={leave} />;
+}
+
+const Centered = ({ children }) => (
+  <div dir="rtl" style={{ ...S.page, alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+    {children}
+  </div>
+);
+
+/* ═══════════ מסך פתיחה: יצירה / הצטרפות ═══════════ */
+function Welcome({ onConnected }) {
+  const [mode, setMode] = useState(null); // null | create | join
+  const [val, setVal] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function go() {
+    if (busy) return;
+    setErr("");
+    if (mode === "join" && !val.trim()) return setErr("הקלידו את הקוד שקיבלתם");
+    setBusy(true);
+    try {
+      const d = mode === "create" ? await api.create(val) : await api.get(val);
+      onConnected(d);
+    } catch (e) {
+      setErr(
+        mode === "join" && e.status === 404
+          ? "הקוד לא נמצא — בדקו אותו ונסו שוב"
+          : "משהו השתבש — נסו שוב"
+      );
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div dir="rtl" style={{ ...S.page, justifyContent: "center", padding: 24 }}>
+      <div style={{ textAlign: "center", marginBottom: 34 }}>
+        <div style={{ ...S.brandIcon, width: 64, height: 64, borderRadius: 20, margin: "0 auto 14px" }}>
+          <CartI size={30} strokeWidth={2.4} />
+        </div>
+        <h1 style={{ ...S.h1, fontSize: 27 }}>קנייה חכמה</h1>
+        <p style={S.sub}>רשימת הקניות של כל המשפחה, במקום אחד</p>
+      </div>
+
+      {!mode && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <button style={S.welcomeCard} onClick={() => setMode("create")}>
+            <div style={S.tplIcon}><HomeI size={20} strokeWidth={2.2} /></div>
+            <div style={{ textAlign: "right", flex: 1 }}>
+              <div style={S.tplName}>משק בית חדש</div>
+              <div style={S.tplCount}>יוצרים פעם אחת ומקבלים קוד לשיתוף</div>
+            </div>
+          </button>
+          <button style={S.welcomeCard} onClick={() => setMode("join")}>
+            <div style={S.tplIcon}><UsersI size={20} strokeWidth={2.2} /></div>
+            <div style={{ textAlign: "right", flex: 1 }}>
+              <div style={S.tplName}>הצטרפות עם קוד</div>
+              <div style={S.tplCount}>קיבלתם קוד מבן משפחה? הקלידו אותו כאן</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {mode && (
+        <div>
+          <label style={S.label}>
+            {mode === "create" ? "שם המשפחה (לא חובה)" : "קוד ההצטרפות"}
+          </label>
+          <input
+            autoFocus
+            value={val}
+            onChange={(e) =>
+              setVal(mode === "join" ? e.target.value.toUpperCase() : e.target.value)
+            }
+            onKeyDown={(e) => e.key === "Enter" && go()}
+            placeholder={mode === "create" ? "למשל: משפחת כהן" : "ABC123"}
+            style={{
+              ...S.input,
+              ...(mode === "join"
+                ? { textAlign: "center", letterSpacing: "4px", fontSize: 20, fontWeight: 800 }
+                : {}),
+            }}
+            dir={mode === "join" ? "ltr" : "rtl"}
+            maxLength={mode === "join" ? 6 : 60}
+          />
+          {err && <p style={S.errText}>{err}</p>}
+          <button onClick={go} style={{ ...S.saveBtn, opacity: busy ? 0.6 : 1 }}>
+            {busy ? "רק רגע…" : mode === "create" ? "יצירת משק בית" : "הצטרפות"}
+          </button>
+          <button
+            onClick={() => { setMode(null); setVal(""); setErr(""); }}
+            style={{ ...S.ghostBtn, width: "100%", marginTop: 10 }}
+          >
+            חזרה
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════ האפליקציה הראשית ═══════════ */
+function App({ hh, setHh, onLeave }) {
+  const code = hh.code;
+  const [tab, setTab] = useState("active");
+  const [transfer, setTransfer] = useState(null);
+  const [share, setShare] = useState(false);
+  const [toast, setToast] = useState("");
+  const toastTimer = useRef(null);
+
+  function flash(msg) {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 1900);
+  }
+  const fail = () => flash("שגיאת חיבור — נסו שוב");
+
+  /* סנכרון: כל 5 שניות כשהמסך פתוח, וגם בחזרה לאפליקציה */
+  useEffect(() => {
+    const sync = async () => {
+      if (document.hidden) return;
+      try { setHh(await api.get(code)); } catch {}
+    };
+    const t = setInterval(sync, 5000);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [code]);
+
+  /* כל מוטציה: אופציונלית עדכון אופטימי, ואז התשובה מהשרת היא האמת */
+  async function run(promise, optimistic) {
+    if (optimistic) setHh(optimistic);
+    try {
+      const d = await promise;
+      setHh(d);
+      return d;
+    } catch (e) {
+      fail();
+      try { setHh(await api.get(code)); } catch {}
+      return null;
+    }
+  }
+
+  const ops = {
+    addActive: (d) => run(api.addItem(code, "active", d)),
+    updActive: (id, d) => run(api.updItem(code, "active", id, d)),
+    delActive: (id) =>
+      run(api.delItem(code, "active", id), {
+        ...hh, active: hh.active.filter((i) => i.id !== id),
+      }),
+    toggleActive: (id) => {
+      const cur = hh.active.find((i) => i.id === id);
+      if (!cur) return;
+      run(api.updItem(code, "active", id, { done: !cur.done }), {
+        ...hh,
+        active: hh.active.map((i) => (i.id === id ? { ...i, done: !i.done } : i)),
+      });
+    },
+    clearDone: () =>
+      run(api.clearDone(code), { ...hh, active: hh.active.filter((i) => !i.done) }),
+
+    addHome: (d) => run(api.addItem(code, "home", d)),
+    updHome: (id, d) => run(api.updItem(code, "home", id, d)),
+    delHome: (id) =>
+      run(api.delItem(code, "home", id), {
+        ...hh, home: hh.home.filter((i) => i.id !== id),
+      }),
+
+    addTemplate: (name) => run(api.addTemplate(code, name)),
+    delTemplate: (tid) => run(api.delTemplate(code, tid)),
+    addTplItem: (tid, d) => run(api.addTplItem(code, tid, d)),
+    updTplItem: (tid, id, d) => run(api.updTplItem(code, tid, id, d)),
+    delTplItem: (tid, id) => run(api.delTplItem(code, tid, id)),
+  };
+
+  async function commitTransfer(selectedIds, mode) {
+    const payload = {
+      source: transfer.source,
+      templateId: transfer.templateId,
+      itemIds: selectedIds,
+      mode,
+    };
+    setTransfer(null);
+    const d = await run(api.transfer(code, payload));
+    if (d) {
+      setTab("active");
+      flash(
+        d.added === 0
+          ? "הכל כבר היה ברשימה"
+          : `${d.added} פריטים נוספו לרשימה`
+      );
+    }
+  }
+
+  return (
+    <div dir="rtl" style={S.page}>
+      <div style={S.appBar}>
+        <div style={S.brand}>
+          <div style={S.brandIcon}><CartI size={18} strokeWidth={2.5} /></div>
+          <div>
+            <span style={S.brandName}>קנייה חכמה</span>
+            <div style={S.brandSub}>{hh.name}</div>
+          </div>
+        </div>
+        <button style={S.shareTop} onClick={() => setShare(true)} aria-label="שיתוף עם המשפחה">
+          <UsersI size={18} strokeWidth={2.2} />
+        </button>
+      </div>
+
+      <div style={S.body}>
+        {tab === "active" && <ActiveList list={hh.active} ops={ops} />}
+        {tab === "home" && (
+          <HomeStock
+            list={hh.home}
+            ops={ops}
+            onSend={() =>
+              setTransfer({ source: "home", title: "מלאי הבית", items: hh.home })
+            }
+          />
+        )}
+        {tab === "templates" && (
+          <Templates
+            templates={hh.templates}
+            ops={ops}
+            onSend={(t) =>
+              setTransfer({
+                source: "template",
+                templateId: t.id,
+                title: t.name,
+                items: t.items,
+              })
+            }
+          />
+        )}
+      </div>
+
+      <nav style={S.nav}>
+        <NavBtn
+          active={tab === "active"} onClick={() => setTab("active")}
+          icon={<CartI size={21} />} label="בסופר עכשיו"
+          badge={hh.active.filter((i) => !i.done).length}
+        />
+        <NavBtn
+          active={tab === "home"} onClick={() => setTab("home")}
+          icon={<HomeI size={21} />} label="מלאי הבית"
+          badge={hh.home.length}
+        />
+        <NavBtn
+          active={tab === "templates"} onClick={() => setTab("templates")}
+          icon={<BookmarkI size={21} />} label="רשימות קבועות"
+        />
+      </nav>
+
+      {transfer && (
+        <TransferSheet data={transfer} onClose={() => setTransfer(null)} onCommit={commitTransfer} />
+      )}
+      {share && <ShareModal hh={hh} onClose={() => setShare(false)} onLeave={onLeave} flash={flash} />}
+      {toast && <div style={S.toast}>{toast}</div>}
+    </div>
+  );
+}
+
+/* ═══════════ שיתוף עם המשפחה ═══════════ */
+function ShareModal({ hh, onClose, onLeave, flash }) {
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(hh.code);
+      flash("הקוד הועתק");
+    } catch {
+      flash("לא הצלחנו להעתיק — העתיקו ידנית");
+    }
+  }
+
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={S.sheet} onClick={(e) => e.stopPropagation()} dir="rtl">
+        <div style={S.handle} />
+        <div style={S.sheetHead}>
+          <h2 style={S.sheetTitle}>שיתוף עם המשפחה</h2>
+          <button onClick={onClose} style={S.closeBtn} aria-label="סגור"><XI size={20} /></button>
+        </div>
+
+        <p style={S.hint}>
+          בני המשפחה פותחים את האפליקציה בטלפון שלהם, בוחרים "הצטרפות עם קוד"
+          ומקלידים את הקוד הזה. מאותו רגע כולם רואים ומעדכנים את אותן רשימות.
+        </p>
+
+        <div style={S.codeBox}>{hh.code}</div>
+
+        <button onClick={copy} style={S.saveBtn}>
+          <CopyI size={17} strokeWidth={2.3} /> העתקת הקוד
+        </button>
+
+        <div style={{ borderTop: "1px solid #e7e6df", marginTop: 22, paddingTop: 16 }}>
+          {!confirmLeave ? (
+            <button onClick={() => setConfirmLeave(true)} style={S.leaveBtn}>
+              <LogOutI size={16} strokeWidth={2.2} /> התנתקות מהמכשיר הזה
+            </button>
+          ) : (
+            <div>
+              <p style={{ ...S.emptyText, textAlign: "right", margin: "0 0 10px" }}>
+                הרשימות יישארו שמורות — תוכלו לחזור בכל רגע עם הקוד {hh.code}. להתנתק?
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={onLeave} style={{ ...S.leaveBtn, background: "#c0563f", color: "#fff" }}>
+                  כן, התנתקות
+                </button>
+                <button onClick={() => setConfirmLeave(false)} style={S.ghostBtn}>ביטול</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════ טאב: בסופר עכשיו ═══════════ */
+function ActiveList({ list, ops }) {
+  const [sortAisle, setSortAisle] = useState(false);
+  const [editing, setEditing] = useState(null);
+
+  const remaining = list.filter((i) => !i.done);
+  const inCart = list.filter((i) => i.done);
+  const total = useMemo(
+    () => list.reduce((s, i) => {
+      const p = parseFloat(i.price);
+      return s + (isNaN(p) ? 0 : p);
+    }, 0),
+    [list]
+  );
+
+  const grouped = useMemo(() => {
+    if (!sortAisle) return null;
+    const m = {};
+    remaining.forEach((i) => (m[i.aisle || "other"] = [...(m[i.aisle || "other"] || []), i]));
+    return Object.keys(m)
+      .sort((a, b) => aisleIndex(a) - aisleIndex(b))
+      .map((k) => ({ aisle: aisleById(k), items: m[k] }));
+  }, [remaining, sortAisle]);
+
+  return (
+    <React.Fragment>
+      <div style={S.pageHead}>
+        <div>
+          <h1 style={S.h1}>בסופר עכשיו</h1>
+          <p style={S.sub}>{remaining.length} לקנייה · {inCart.length} בעגלה</p>
+        </div>
+        <div style={S.totalChip}>
+          <span style={S.totalLabel}>הערכה</span>
+          <span style={S.totalVal}>₪{total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {list.length > 0 && (
+        <button
+          onClick={() => setSortAisle((s) => !s)}
+          style={{ ...S.sortBtn, ...(sortAisle ? S.sortOn : {}) }}
+          aria-pressed={sortAisle}
+        >
+          <UpDownI size={15} strokeWidth={2.2} />
+          {sortAisle ? "ממוין לפי מסלול בסופר" : "סדר לפי מסלול בסופר"}
+        </button>
+      )}
+
+      {list.length === 0 && (
+        <div style={S.empty}>
+          <div style={S.emptyIcon}><StoreI size={28} strokeWidth={1.8} /></div>
+          <p style={S.emptyTitle}>אין רשימה פעילה</p>
+          <p style={S.emptyText}>
+            עברו ל"מלאי הבית" או ל"רשימות קבועות" והעבירו פריטים לכאן, או הקלידו בשורה למטה.
+          </p>
+        </div>
+      )}
+
+      {sortAisle && grouped
+        ? grouped.map((g) => (
+            <section key={g.aisle.id} style={S.aisleGroup}>
+              <div style={S.aisleHead}>
+                <span style={{ fontSize: 16 }}>{g.aisle.emoji}</span>
+                <span style={S.aisleName}>{g.aisle.name}</span>
+                <span style={S.aisleCount}>{g.items.length}</span>
+              </div>
+              {g.items.map((it) => (
+                <Row key={it.id} item={it}
+                  onToggle={ops.toggleActive} onEdit={setEditing} onRemove={ops.delActive} />
+              ))}
+            </section>
+          ))
+        : remaining.map((it) => (
+            <Row key={it.id} item={it} showAisle
+              onToggle={ops.toggleActive} onEdit={setEditing} onRemove={ops.delActive} />
+          ))}
+
+      {inCart.length > 0 && (
+        <section style={{ marginTop: 22 }}>
+          <div style={S.sectionHead}>
+            <span style={S.sectionTitle}>כבר בעגלה</span>
+            <button onClick={ops.clearDone} style={S.linkDanger}>נקה הכל</button>
+          </div>
+          {inCart.map((it) => (
+            <Row key={it.id} item={it}
+              onToggle={ops.toggleActive} onEdit={setEditing} onRemove={ops.delActive} />
+          ))}
+        </section>
+      )}
+
+      <QuickAdd placeholder="מה עוד צריך?" onAdd={ops.addActive} />
+
+      {editing && (
+        <ItemSheet
+          title="עריכת מצרך" initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(d) => { ops.updActive(editing.id, d); setEditing(null); }}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
+/* ═══════════ טאב: מלאי הבית ═══════════ */
+function HomeStock({ list, ops, onSend }) {
+  const [editing, setEditing] = useState(null);
+
+  return (
+    <React.Fragment>
+      <div style={S.pageHead}>
+        <div>
+          <h1 style={S.h1}>מלאי הבית</h1>
+          <p style={S.sub}>מה שחסר בבית · {list.length} פריטים</p>
+        </div>
+      </div>
+
+      <p style={S.hint}>
+        עדכנו כאן כל פעם שמשהו נגמר בבית — כל המשפחה רואה. כשהולכים לסופר, שולחים הכל או חלק לרשימה הפעילה.
+      </p>
+
+      {list.length === 0 ? (
+        <div style={S.empty}>
+          <div style={S.emptyIcon}><HomeI size={28} strokeWidth={1.8} /></div>
+          <p style={S.emptyTitle}>המלאי ריק</p>
+          <p style={S.emptyText}>הקלידו למטה את הפריט הראשון שחסר בבית</p>
+        </div>
+      ) : (
+        list.map((it) => (
+          <Row key={it.id} item={it} showAisle plain onEdit={setEditing} onRemove={ops.delHome} />
+        ))
+      )}
+
+      {list.length > 0 && (
+        <button onClick={onSend} style={S.sendBtn}>
+          <LeftRightI size={18} strokeWidth={2.3} /> שליחה לרשימה הפעילה
+        </button>
+      )}
+
+      <QuickAdd placeholder="מה חסר בבית?" onAdd={ops.addHome} />
+
+      {editing && (
+        <ItemSheet
+          title="עריכת פריט" initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(d) => { ops.updHome(editing.id, d); setEditing(null); }}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
+/* ═══════════ טאב: רשימות קבועות ═══════════ */
+function Templates({ templates, ops, onSend }) {
+  const [openId, setOpenId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  async function createTemplate() {
+    const n = newName.trim();
+    if (!n) return;
+    setNewName("");
+    setCreating(false);
+    const d = await ops.addTemplate(n);
+    if (d) {
+      const t = d.templates.find((t) => t.name === n);
+      if (t) setOpenId(t.id);
+    }
+  }
+
+  const open = templates.find((t) => t.id === openId);
+  if (openId && !open) setOpenId(null); // נמחקה ממכשיר אחר
+
+  if (open) {
+    return (
+      <TemplateDetail
+        template={open}
+        ops={ops}
+        onBack={() => setOpenId(null)}
+        onDelete={() => { ops.delTemplate(open.id); setOpenId(null); }}
+        onSend={() => onSend(open)}
+      />
+    );
+  }
+
+  return (
+    <React.Fragment>
+      <div style={S.pageHead}>
+        <div>
+          <h1 style={S.h1}>רשימות קבועות</h1>
+          <p style={S.sub}>תבניות שמורות לשימוש חוזר</p>
+        </div>
+      </div>
+
+      {templates.length === 0 && !creating && (
+        <div style={S.empty}>
+          <div style={S.emptyIcon}><BookmarkI size={26} strokeWidth={1.8} /></div>
+          <p style={S.emptyTitle}>אין עדיין רשימות קבועות</p>
+          <p style={S.emptyText}>צרו תבנית כמו "קנייה גדולה" ותשתמשו בה שוב ושוב</p>
+        </div>
+      )}
+
+      {templates.map((t) => (
+        <div key={t.id} style={S.tplCard}>
+          <button style={S.tplMain} onClick={() => setOpenId(t.id)}>
+            <div style={S.tplIcon}><BookmarkI size={18} strokeWidth={2.2} /></div>
+            <div style={{ textAlign: "right", flex: 1 }}>
+              <div style={S.tplName}>{t.name}</div>
+              <div style={S.tplCount}>{t.items.length} פריטים</div>
+            </div>
+            <ChevronLeftI size={20} style={{ color: "#9aa69c" }} />
+          </button>
+          <button style={S.tplSend} onClick={() => onSend(t)} aria-label={`שלח ${t.name}`}>
+            <LeftRightI size={17} strokeWidth={2.3} />
+          </button>
+        </div>
+      ))}
+
+      {creating ? (
+        <div style={{ marginTop: 8 }}>
+          <input
+            autoFocus value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && createTemplate()}
+            placeholder="שם הרשימה (למשל: מסיבה)" style={S.input}
+          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={createTemplate} style={S.saveBtn}>יצירה</button>
+            <button onClick={() => { setCreating(false); setNewName(""); }} style={S.ghostBtn}>ביטול</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setCreating(true)} style={S.sendBtn}>
+          <ListPlusI size={18} strokeWidth={2.3} /> רשימה קבועה חדשה
+        </button>
+      )}
+    </React.Fragment>
+  );
+}
+
+function TemplateDetail({ template, ops, onBack, onDelete, onSend }) {
+  const [editing, setEditing] = useState(null);
+  const items = template.items;
+
+  return (
+    <React.Fragment>
+      <button onClick={onBack} style={S.backBtn}>
+        <ChevronLeftI size={18} style={{ transform: "scaleX(-1)" }} /> כל הרשימות
+      </button>
+
+      <div style={S.pageHead}>
+        <div>
+          <h1 style={S.h1}>{template.name}</h1>
+          <p style={S.sub}>{items.length} פריטים</p>
+        </div>
+        <button onClick={onDelete} style={S.iconDanger} aria-label="מחק רשימה">
+          <TrashI size={18} />
+        </button>
+      </div>
+
+      {items.length === 0 ? (
+        <div style={S.empty}>
+          <div style={S.emptyIcon}><BookmarkI size={26} strokeWidth={1.8} /></div>
+          <p style={S.emptyText}>הקלידו למטה כדי להוסיף פריטים לתבנית</p>
+        </div>
+      ) : (
+        items.map((it) => (
+          <Row key={it.id} item={it} showAisle plain
+            onEdit={setEditing} onRemove={(id) => ops.delTplItem(template.id, id)} />
+        ))
+      )}
+
+      {items.length > 0 && (
+        <button onClick={onSend} style={S.sendBtn}>
+          <LeftRightI size={18} strokeWidth={2.3} /> שליחה לרשימה הפעילה
+        </button>
+      )}
+
+      <QuickAdd placeholder="הוספת פריט לתבנית..." onAdd={(d) => ops.addTplItem(template.id, d)} />
+
+      {editing && (
+        <ItemSheet
+          title="עריכת פריט" initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(d) => { ops.updTplItem(template.id, editing.id, d); setEditing(null); }}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
+/* ═══════════ חלון העברה ═══════════ */
+function TransferSheet({ data, onClose, onCommit }) {
+  const [selected, setSelected] = useState(data.items.map((i) => i.id));
+  const allOn = selected.length === data.items.length;
+  const isHome = data.source === "home";
+
+  const toggle = (id) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const toggleAll = () => setSelected(allOn ? [] : data.items.map((i) => i.id));
+
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={S.sheet} onClick={(e) => e.stopPropagation()} dir="rtl">
+        <div style={S.handle} />
+        <div style={S.sheetHead}>
+          <div>
+            <h2 style={S.sheetTitle}>שליחה לרשימה הפעילה</h2>
+            <p style={S.sheetSub}>מתוך: {data.title}</p>
+          </div>
+          <button onClick={onClose} style={S.closeBtn} aria-label="סגור"><XI size={20} /></button>
+        </div>
+
+        <button onClick={toggleAll} style={S.selectAll}>
+          {allOn
+            ? <CheckSquareI size={18} style={{ color: "#15803d" }} />
+            : <SquareI size={18} style={{ color: "#9aa69c" }} />}
+          {allOn ? "בטל בחירת הכל" : "בחר הכל"}
+          <span style={S.selCount}>{selected.length}/{data.items.length}</span>
+        </button>
+
+        <div style={S.selList}>
+          {data.items.map((it) => {
+            const on = selected.includes(it.id);
+            return (
+              <button key={it.id} onClick={() => toggle(it.id)}
+                style={{ ...S.selRow, ...(on ? S.selRowOn : {}) }}>
+                {on
+                  ? <CheckSquareI size={19} style={{ color: "#15803d" }} />
+                  : <SquareI size={19} style={{ color: "#c2ccc4" }} />}
+                <span style={S.selName}>{it.name}</span>
+                {it.qty && <span style={S.selQty}>{it.qty}</span>}
+                <span style={S.selAisle}>{aisleById(it.aisle).emoji}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={S.transferActions}>
+          <button
+            onClick={() => onCommit(selected, "copy")}
+            disabled={!selected.length}
+            style={{ ...S.saveBtn, opacity: selected.length ? 1 : 0.5 }}>
+            <CopyI size={17} strokeWidth={2.3} /> העתקה {isHome ? "(להשאיר)" : ""}
+          </button>
+          {isHome && (
+            <button
+              onClick={() => onCommit(selected, "move")}
+              disabled={!selected.length}
+              style={{ ...S.moveBtn, opacity: selected.length ? 1 : 0.5 }}>
+              <LeftRightI size={17} strokeWidth={2.3} /> העברה (להסיר)
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════ רכיבים משותפים ═══════════ */
+function Row({ item, onToggle, onEdit, onRemove, showAisle, plain }) {
+  const aisle = aisleById(item.aisle);
+  const tappable = !plain && onToggle;
+  return (
+    <div style={{ ...S.row, ...(item.done ? S.rowDone : {}) }}>
+      {tappable && (
+        <button
+          onClick={() => onToggle(item.id)}
+          style={{ ...S.check, ...(item.done ? S.checkOn : {}) }}
+          aria-label={item.done ? "החזר לרשימה" : "סמן בעגלה"}>
+          {item.done && <CheckI size={16} strokeWidth={3} />}
+        </button>
+      )}
+
+      <button
+        style={S.rowBody}
+        onClick={() => (tappable ? onToggle(item.id) : onEdit && onEdit(item))}
+        aria-label={
+          tappable
+            ? item.done ? `החזר את ${item.name} לרשימה` : `סמן את ${item.name} בעגלה`
+            : `ערוך ${item.name}`
+        }>
+        <div style={S.rowMain}>
+          <span style={{ ...S.itemName, ...(item.done ? S.strike : {}) }}>{item.name}</span>
+          <div style={S.meta}>
+            {item.qty && <span style={S.qty}>{item.qty}</span>}
+            {showAisle && <span style={S.aisleTag}>{aisle.emoji} {aisle.name}</span>}
+          </div>
+        </div>
+        {item.price && !isNaN(parseFloat(item.price)) && (
+          <span style={S.price}>₪{parseFloat(item.price).toFixed(2)}</span>
+        )}
+      </button>
+
+      {tappable && onEdit && (
+        <button onClick={() => onEdit(item)} style={S.editBtn} aria-label={`ערוך ${item.name}`}>
+          <PencilI size={15} strokeWidth={2} />
+        </button>
+      )}
+
+      <button onClick={() => onRemove(item.id)} style={S.del} aria-label={`מחק ${item.name}`}>
+        <TrashI size={17} strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+function ItemSheet({ title, initial, onClose, onSave }) {
+  const [name, setName] = useState((initial && initial.name) || "");
+  const [qty, setQty] = useState((initial && initial.qty) || "");
+  const [price, setPrice] = useState((initial && initial.price) || "");
+  const [aisle, setAisle] = useState((initial && initial.aisle) || "other");
+  const nameRef = useRef(null);
+
+  function save() {
+    if (!name.trim()) return nameRef.current && nameRef.current.focus();
+    onSave({ name: name.trim(), qty: qty.trim(), price: price.trim(), aisle });
+  }
+  const onEnter = (e) => e.key === "Enter" && save();
+
+  return (
+    <div style={S.overlay} onClick={onClose}>
+      <div style={S.sheet} onClick={(e) => e.stopPropagation()} dir="rtl">
+        <div style={S.handle} />
+        <div style={S.sheetHead}>
+          <h2 style={S.sheetTitle}>{title}</h2>
+          <button onClick={onClose} style={S.closeBtn} aria-label="סגור"><XI size={20} /></button>
+        </div>
+
+        <label style={S.label}>שם המצרך</label>
+        <input ref={nameRef} autoFocus value={name}
+          onChange={(e) => setName(e.target.value)} onKeyDown={onEnter}
+          placeholder="למשל: גבינה צהובה" style={S.input} />
+
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={S.label}>כמות</label>
+            <input value={qty} onChange={(e) => setQty(e.target.value)}
+              onKeyDown={onEnter} placeholder="2 / 1 ק״ג" style={S.input} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={S.label}>מחיר משוער (לא חובה)</label>
+            <input value={price} onChange={(e) => setPrice(e.target.value)}
+              onKeyDown={onEnter} inputMode="decimal" placeholder="₪" style={S.input} />
+          </div>
+        </div>
+
+        <label style={S.label}>מחלקה בסופר</label>
+        <div style={S.aislePicker}>
+          {AISLES.map((a) => (
+            <button key={a.id} onClick={() => setAisle(a.id)}
+              style={{ ...S.aisleChip, ...(aisle === a.id ? S.aisleChipOn : {}) }}>
+              <span>{a.emoji}</span>{a.name}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={save} style={S.saveBtn}>
+          {initial ? "שמירת שינויים" : "הוספה"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuickAdd({ onAdd, placeholder }) {
+  const [name, setName] = useState("");
+  const ref = useRef(null);
+
+  function add() {
+    const trimmed = name.trim();
+    if (!trimmed) return ref.current && ref.current.focus();
+    onAdd({ name: trimmed, qty: "", price: "", aisle: "other" });
+    setName("");
+    ref.current && ref.current.focus();
+  }
+
+  return (
+    <div style={S.quickBar}>
+      <input
+        ref={ref} value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && add()}
+        placeholder={placeholder || "הוספה מהירה..."}
+        style={S.quickInput} enterKeyHint="done" />
+      <button onClick={add} style={S.quickBtn} aria-label="הוסף לרשימה">
+        <PlusI size={24} strokeWidth={2.6} />
+      </button>
+    </div>
+  );
+}
+
+function NavBtn({ active, onClick, icon, label, badge }) {
+  return (
+    <button onClick={onClick} style={{ ...S.navBtn, ...(active ? S.navOn : {}) }}>
+      <div style={{ position: "relative" }}>
+        {icon}
+        {badge > 0 && <span style={S.navBadge}>{badge}</span>}
+      </div>
+      <span style={S.navLabel}>{label}</span>
+    </button>
+  );
+}
+
+/* ═══════════ עיצוב ═══════════ */
+const ACCENT = "#15803d";
+const ACCENT_SOFT = "#dcfce7";
+const INK = "#14271c";
+const PAPER = "#f6f5f0";
+const CARD = "#ffffff";
+const MUTED = "#7c8a80";
+const DANGER = "#c0563f";
+
+const S = {
+  page: {
+    fontFamily: "'Heebo','Segoe UI',system-ui,-apple-system,sans-serif",
+    background: PAPER, color: INK,
+    minHeight: "100vh", maxWidth: 480, margin: "0 auto",
+    position: "relative", display: "flex", flexDirection: "column",
+  },
+  appBar: {
+    position: "sticky", top: 0, zIndex: 10, background: PAPER,
+    padding: "14px 18px 10px",
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+  },
+  brand: { display: "flex", alignItems: "center", gap: 10 },
+  brandIcon: {
+    width: 38, height: 38, borderRadius: 12, background: ACCENT, color: "#fff",
+    display: "grid", placeItems: "center",
+    boxShadow: "0 3px 10px rgba(21,128,61,.3)", flexShrink: 0,
+  },
+  brandName: { fontSize: 16, fontWeight: 800, letterSpacing: "-.3px" },
+  brandSub: { fontSize: 11.5, color: MUTED, fontWeight: 600, marginTop: 1 },
+  shareTop: {
+    width: 40, height: 40, borderRadius: 12,
+    border: "1.5px solid #e0dfd7", background: CARD, color: ACCENT,
+    display: "grid", placeItems: "center",
+  },
+
+  body: { flex: 1, padding: "4px 14px 175px", overflowY: "auto" },
+
+  pageHead: {
+    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+    margin: "8px 4px 14px",
+  },
+  h1: { margin: 0, fontSize: 23, fontWeight: 800, letterSpacing: "-.5px" },
+  sub: { margin: "3px 0 0", fontSize: 13, color: MUTED, fontWeight: 600 },
+  hint: {
+    fontSize: 12.5, color: MUTED, fontWeight: 600, lineHeight: 1.5,
+    background: "#eef0ea", padding: "10px 13px", borderRadius: 12, margin: "0 0 14px",
+  },
+
+  totalChip: {
+    display: "flex", flexDirection: "column", alignItems: "flex-end",
+    background: CARD, border: "1.5px solid #e0dfd7", borderRadius: 12, padding: "6px 13px",
+  },
+  totalLabel: { fontSize: 10.5, color: MUTED, fontWeight: 700 },
+  totalVal: { fontSize: 16, fontWeight: 800, color: ACCENT },
+
+  sortBtn: {
+    width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+    padding: "12px", borderRadius: 13, border: "1.5px solid #e0dfd7",
+    background: CARD, color: INK, fontSize: 14, fontWeight: 700, marginBottom: 14,
+    transition: "all .18s",
+  },
+  sortOn: {
+    background: ACCENT, borderColor: ACCENT, color: "#fff",
+    boxShadow: "0 4px 12px rgba(21,128,61,.25)",
+  },
+
+  aisleGroup: { marginBottom: 6 },
+  aisleHead: { display: "flex", alignItems: "center", gap: 8, padding: "8px 4px 8px" },
+  aisleName: { fontSize: 13.5, fontWeight: 800 },
+  aisleCount: {
+    fontSize: 11, fontWeight: 700, color: ACCENT, background: ACCENT_SOFT,
+    borderRadius: 20, padding: "1px 8px",
+  },
+
+  row: {
+    display: "flex", alignItems: "stretch", gap: 10,
+    background: CARD, borderRadius: 15, padding: "11px 12px", marginBottom: 9,
+    border: "1px solid #ecece4", boxShadow: "0 1px 2px rgba(20,39,28,.04)",
+    transition: "opacity .2s",
+  },
+  rowDone: { opacity: 0.62, background: "#f3f4f1" },
+  check: {
+    flexShrink: 0, width: 26, height: 26, borderRadius: 9,
+    border: "2px solid #cfd6cf", background: "transparent", color: "#fff",
+    display: "grid", placeItems: "center", alignSelf: "center", transition: "all .15s",
+  },
+  checkOn: { background: ACCENT, borderColor: ACCENT },
+  rowBody: {
+    flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+    background: "transparent", border: "none", padding: 0, textAlign: "right",
+  },
+  rowMain: { display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
+  itemName: { fontSize: 15.5, fontWeight: 700 },
+  strike: { textDecoration: "line-through", color: MUTED },
+  meta: { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" },
+  qty: {
+    fontSize: 12, fontWeight: 700, color: ACCENT, background: ACCENT_SOFT,
+    padding: "1px 8px", borderRadius: 7,
+  },
+  aisleTag: { fontSize: 11.5, color: MUTED, fontWeight: 600 },
+  price: { fontSize: 15, fontWeight: 800, flexShrink: 0 },
+  del: {
+    flexShrink: 0, width: 36, border: "none", background: "transparent",
+    color: DANGER, display: "grid", placeItems: "center", borderRadius: 10,
+  },
+  editBtn: {
+    flexShrink: 0, width: 32, border: "none", background: "transparent",
+    color: MUTED, display: "grid", placeItems: "center", borderRadius: 10,
+  },
+
+  sectionHead: {
+    display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px 8px",
+  },
+  sectionTitle: { fontSize: 13, fontWeight: 800, color: MUTED },
+  linkDanger: {
+    fontSize: 13, fontWeight: 700, color: DANGER, background: "transparent", border: "none",
+  },
+
+  sendBtn: {
+    width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    padding: "14px", borderRadius: 14, background: ACCENT, color: "#fff", border: "none",
+    fontSize: 15, fontWeight: 800, marginTop: 8,
+    boxShadow: "0 5px 16px rgba(21,128,61,.3)",
+  },
+
+  tplCard: { display: "flex", gap: 8, marginBottom: 10 },
+  tplMain: {
+    flex: 1, display: "flex", alignItems: "center", gap: 12,
+    background: CARD, border: "1px solid #ecece4", borderRadius: 15, padding: "14px 14px",
+    boxShadow: "0 1px 2px rgba(20,39,28,.04)",
+  },
+  tplIcon: {
+    width: 40, height: 40, borderRadius: 12, background: ACCENT_SOFT, color: ACCENT,
+    display: "grid", placeItems: "center", flexShrink: 0,
+  },
+  tplName: { fontSize: 16, fontWeight: 800 },
+  tplCount: { fontSize: 12.5, color: MUTED, fontWeight: 600, marginTop: 2 },
+  tplSend: {
+    width: 52, borderRadius: 15, border: "1.5px solid " + ACCENT,
+    background: ACCENT_SOFT, color: ACCENT, display: "grid", placeItems: "center",
+  },
+
+  backBtn: {
+    display: "flex", alignItems: "center", gap: 4, background: "transparent", border: "none",
+    color: ACCENT, fontSize: 14, fontWeight: 700, padding: "4px 2px 8px",
+  },
+  iconDanger: {
+    border: "none", background: "#fbeae6", color: DANGER,
+    width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center",
+  },
+
+  quickBar: {
+    position: "fixed", bottom: 68, left: 0, right: 0, margin: "0 auto",
+    width: "100%", maxWidth: 480, display: "flex", gap: 8, padding: "10px 14px",
+    background: "linear-gradient(transparent, " + PAPER + " 30%)", zIndex: 20,
+  },
+  quickInput: {
+    flex: 1, padding: "13px 16px", borderRadius: 15, border: "1.5px solid #dcdbd2",
+    background: CARD, fontSize: 15.5, fontWeight: 600, color: INK, outline: "none",
+    boxShadow: "0 3px 12px rgba(20,39,28,.08)",
+  },
+  quickBtn: {
+    flexShrink: 0, width: 52, height: 52, borderRadius: 16,
+    background: ACCENT, color: "#fff", border: "none",
+    display: "grid", placeItems: "center",
+    boxShadow: "0 5px 16px rgba(21,128,61,.38)",
+  },
+
+  nav: {
+    position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto",
+    width: "100%", maxWidth: 480, display: "flex",
+    background: CARD, borderTop: "1px solid #e7e6df",
+    padding: "8px 6px calc(12px + env(safe-area-inset-bottom))", zIndex: 15,
+  },
+  navBtn: {
+    flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+    background: "transparent", border: "none", color: MUTED, padding: "4px 2px",
+  },
+  navOn: { color: ACCENT },
+  navLabel: { fontSize: 11, fontWeight: 700 },
+  navBadge: {
+    position: "absolute", top: -6, insetInlineEnd: -8,
+    background: DANGER, color: "#fff", fontSize: 10, fontWeight: 800,
+    minWidth: 17, height: 17, borderRadius: 10,
+    display: "grid", placeItems: "center", padding: "0 4px",
+  },
+
+  overlay: {
+    position: "fixed", inset: 0, background: "rgba(20,39,28,.45)", zIndex: 30,
+    display: "flex", alignItems: "flex-end", justifyContent: "center",
+    backdropFilter: "blur(2px)",
+  },
+  sheet: {
+    width: "100%", maxWidth: 480, background: PAPER,
+    borderRadius: "24px 24px 0 0", padding: "10px 20px 26px",
+    boxShadow: "0 -10px 40px rgba(0,0,0,.2)", maxHeight: "92vh", overflowY: "auto",
+  },
+  handle: { width: 40, height: 4, background: "#d4d3cb", borderRadius: 4, margin: "0 auto 14px" },
+  sheetHead: {
+    display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16,
+  },
+  sheetTitle: { margin: 0, fontSize: 19, fontWeight: 800 },
+  sheetSub: { margin: "2px 0 0", fontSize: 13, color: MUTED, fontWeight: 600 },
+  closeBtn: {
+    border: "none", background: "#ecece4", width: 34, height: 34, borderRadius: 10,
+    display: "grid", placeItems: "center", color: INK,
+  },
+  label: {
+    display: "block", fontSize: 12.5, fontWeight: 700, color: MUTED, margin: "0 0 6px 2px",
+  },
+  input: {
+    width: "100%", padding: "13px 14px", borderRadius: 13,
+    border: "1.5px solid #e0dfd7", background: CARD,
+    fontSize: 15.5, fontWeight: 600, color: INK, marginBottom: 14, outline: "none",
+  },
+  errText: { color: DANGER, fontSize: 13, fontWeight: 700, margin: "-6px 0 12px 0" },
+  aislePicker: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 },
+  aisleChip: {
+    display: "flex", alignItems: "center", gap: 5, padding: "8px 12px", borderRadius: 11,
+    border: "1.5px solid #e0dfd7", background: CARD,
+    fontSize: 13, fontWeight: 700, color: INK, transition: "all .15s",
+  },
+  aisleChipOn: { background: ACCENT, borderColor: ACCENT, color: "#fff" },
+  saveBtn: {
+    flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+    padding: "15px", borderRadius: 14, background: ACCENT, color: "#fff", border: "none",
+    fontSize: 15.5, fontWeight: 800, boxShadow: "0 5px 16px rgba(21,128,61,.3)",
+  },
+  moveBtn: {
+    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+    padding: "15px", borderRadius: 14, background: CARD, color: ACCENT,
+    border: "1.5px solid " + ACCENT, fontSize: 15.5, fontWeight: 800,
+  },
+  ghostBtn: {
+    padding: "15px 20px", borderRadius: 14, background: "#ecece4", color: INK,
+    border: "none", fontSize: 15, fontWeight: 700,
+  },
+  leaveBtn: {
+    display: "flex", alignItems: "center", gap: 7,
+    padding: "12px 16px", borderRadius: 12, background: "#fbeae6", color: DANGER,
+    border: "none", fontSize: 14, fontWeight: 700,
+  },
+
+  welcomeCard: {
+    display: "flex", alignItems: "center", gap: 14,
+    background: CARD, border: "1.5px solid #e7e6df", borderRadius: 17, padding: "17px 16px",
+    boxShadow: "0 2px 8px rgba(20,39,28,.05)", textAlign: "right",
+  },
+  codeBox: {
+    textAlign: "center", fontSize: 34, fontWeight: 800, letterSpacing: "8px",
+    color: ACCENT, background: ACCENT_SOFT, borderRadius: 16,
+    padding: "18px 10px 18px 2px", margin: "4px 0 14px",
+    fontFamily: "'Heebo', monospace", direction: "ltr",
+  },
+
+  selectAll: {
+    display: "flex", alignItems: "center", gap: 8, width: "100%",
+    padding: "10px 12px", borderRadius: 12, border: "1.5px solid #e0dfd7",
+    background: CARD, fontSize: 14, fontWeight: 700, color: INK, marginBottom: 10,
+  },
+  selCount: { marginInlineStart: "auto", fontSize: 12, color: MUTED, fontWeight: 700 },
+  selList: {
+    display: "flex", flexDirection: "column", gap: 7, marginBottom: 18,
+    maxHeight: "44vh", overflowY: "auto",
+  },
+  selRow: {
+    display: "flex", alignItems: "center", gap: 10, padding: "11px 12px",
+    borderRadius: 12, border: "1.5px solid #ecece4", background: CARD, textAlign: "right",
+  },
+  selRowOn: { borderColor: ACCENT, background: ACCENT_SOFT },
+  selName: { fontSize: 15, fontWeight: 700, flex: 1 },
+  selQty: { fontSize: 12, fontWeight: 700, color: ACCENT },
+  selAisle: { fontSize: 15 },
+  transferActions: { display: "flex", gap: 10 },
+
+  empty: {
+    textAlign: "center", padding: "40px 24px",
+    display: "flex", flexDirection: "column", alignItems: "center",
+  },
+  emptyIcon: {
+    width: 66, height: 66, borderRadius: 20, background: ACCENT_SOFT, color: ACCENT,
+    display: "grid", placeItems: "center", marginBottom: 14,
+  },
+  emptyTitle: { fontSize: 17, fontWeight: 800, margin: 0 },
+  emptyText: {
+    fontSize: 13.5, color: MUTED, margin: "6px 0 0", fontWeight: 600, lineHeight: 1.5,
+  },
+
+  toast: {
+    position: "fixed", bottom: 150, left: "50%", transform: "translateX(-50%)",
+    background: INK, color: "#fff", padding: "11px 20px", borderRadius: 13,
+    fontSize: 14, fontWeight: 700, zIndex: 40,
+    boxShadow: "0 8px 24px rgba(0,0,0,.25)", whiteSpace: "nowrap",
+  },
+};
+
+/* רישום service worker עבור PWA */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+</script>
+</body>
+</html>
