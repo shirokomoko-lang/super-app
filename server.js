@@ -185,6 +185,31 @@ app.post(
   })
 );
 
+// הוספה מרובה לרשימה (active / home) — לייבוא ולרשימה הגדולה.
+// מונע כפילויות לפי שם מול מה שכבר קיים ברשימה.
+app.post(
+  "/api/household/:code/:list/bulk",
+  wrap(async (req, res) => {
+    const { list } = req.params;
+    if (!LISTS.has(list)) return res.status(400).json({ error: "bad_list" });
+    const h = await findByCode(req.params.code);
+    if (!h) return res.status(404).json({ error: "not_found" });
+
+    const incoming = Array.isArray((req.body || {}).items) ? req.body.items : [];
+    const existing = new Set(h[list].map((i) => i.name));
+    const toAdd = [];
+    for (const raw of incoming) {
+      const item = cleanItem(raw);
+      if (!item.name || existing.has(item.name)) continue;
+      existing.add(item.name);
+      toAdd.push(item);
+    }
+    h[list].unshift(...toAdd);
+    await h.save();
+    res.json({ ...out(h), added: toAdd.length });
+  })
+);
+
 /* ── רשימות קבועות (תבניות) ── */
 app.post(
   "/api/household/:code/templates",
