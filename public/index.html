@@ -591,6 +591,7 @@ function ImportModal({ onClose, onImport }) {
 /* ═══════════ טאב: בסופר עכשיו ═══════════ */
 function ActiveList({ list, ops }) {
   const [sortAisle, setSortAisle] = useState(false);
+  const [catFilter, setCatFilter] = useState("all"); // "all" או id מחלקה
   const [editing, setEditing] = useState(null);
 
   const remaining = list.filter((i) => !i.done);
@@ -603,14 +604,31 @@ function ActiveList({ list, ops }) {
     [list]
   );
 
+  // אילו קטגוריות קיימות ברשימה (מבין הפריטים שעוד לא בעגלה) — לפי סדר המסלול
+  const presentAisles = useMemo(() => {
+    const set = new Set(remaining.map((i) => i.aisle || "other"));
+    return AISLES.filter((a) => set.has(a.id));
+  }, [remaining]);
+
+  // אם הקטגוריה שסוננה כבר לא קיימת (הכול נלקח) — חוזרים ל"הכל"
+  useEffect(() => {
+    if (catFilter !== "all" && !presentAisles.some((a) => a.id === catFilter)) {
+      setCatFilter("all");
+    }
+  }, [presentAisles, catFilter]);
+
+  const filtered = catFilter === "all"
+    ? remaining
+    : remaining.filter((i) => (i.aisle || "other") === catFilter);
+
   const grouped = useMemo(() => {
     if (!sortAisle) return null;
     const m = {};
-    remaining.forEach((i) => (m[i.aisle || "other"] = [...(m[i.aisle || "other"] || []), i]));
+    filtered.forEach((i) => (m[i.aisle || "other"] = [...(m[i.aisle || "other"] || []), i]));
     return Object.keys(m)
       .sort((a, b) => aisleIndex(a) - aisleIndex(b))
       .map((k) => ({ aisle: aisleById(k), items: m[k] }));
-  }, [remaining, sortAisle]);
+  }, [filtered, sortAisle]);
 
   return (
     <React.Fragment>
@@ -634,6 +652,26 @@ function ActiveList({ list, ops }) {
           <UpDownI size={15} strokeWidth={2.2} />
           {sortAisle ? "ממוין לפי מסלול בסופר" : "סדר לפי מסלול בסופר"}
         </button>
+      )}
+
+      {presentAisles.length > 1 && (
+        <div style={S.filterRow}>
+          <button
+            onClick={() => setCatFilter("all")}
+            style={{ ...S.filterChip, ...(catFilter === "all" ? S.filterChipOn : {}) }}>
+            הכל ({remaining.length})
+          </button>
+          {presentAisles.map((a) => {
+            const count = remaining.filter((i) => (i.aisle || "other") === a.id).length;
+            return (
+              <button key={a.id}
+                onClick={() => setCatFilter(a.id)}
+                style={{ ...S.filterChip, ...(catFilter === a.id ? S.filterChipOn : {}) }}>
+                {a.emoji} {a.name} ({count})
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {list.length === 0 && (
@@ -660,12 +698,12 @@ function ActiveList({ list, ops }) {
               ))}
             </section>
           ))
-        : remaining.map((it) => (
+        : filtered.map((it) => (
             <Row key={it.id} item={it} showAisle
               onToggle={ops.toggleActive} onEdit={setEditing} onRemove={ops.delActive} />
           ))}
 
-      {inCart.length > 0 && (
+      {inCart.length > 0 && catFilter === "all" && (
         <section style={{ marginTop: 22 }}>
           <div style={S.sectionHead}>
             <span style={S.sectionTitle}>כבר בעגלה</span>
